@@ -1,0 +1,648 @@
+    {% macro stock_card(stock, rank) %}
+
+
+    <div class="stock-card">
+
+
+        <div class="stock-top">
+
+
+            <div class="stock-identity">
+
+                <div class="rank
+                    {% if rank == 1 %}
+                        rank-first
+                    {% elif rank == 2 %}
+                        rank-second
+                    {% elif rank == 3 %}
+                        rank-third
+                    {% endif %}
+                ">
+                    {{ rank }}
+                </div>
+
+                <div class="stock-info">
+
+                    <div class="stock-code">
+                        {{ stock.code }}
+                    </div>
+
+                    <div class="company-name">
+                        {{ stock.company_name }}
+                    </div>
+
+
+                    <div class="badges">
+
+
+                        <span class="badge badge-watch">
+                            {{ stock.watchlist_status }}
+                        </span>
+
+
+                        {% if stock.recommendation in ['BUY', 'STRONG BUY'] %}
+
+                            <span class="badge badge-buy">
+                                {{ stock.recommendation }}
+                            </span>
+
+                        {% elif stock.recommendation == 'BREAKOUT BUY' %}
+
+                            <span class="badge badge-breakout">
+                                {{ stock.recommendation }}
+                            </span>
+
+                        {% elif stock.recommendation == 'BUY ON WEAKNESS' %}
+
+                            <span class="badge badge-bow">
+                                {{ stock.recommendation }}
+                            </span>
+
+                        {% elif stock.recommendation == 'AVOID' %}
+
+                            <span class="badge badge-avoid">
+                                {{ stock.recommendation }}
+                            </span>
+
+                        {% elif stock.recommendation == 'WAIT' %}
+
+                            <span class="badge badge-wait">
+                                {{ stock.recommendation }}
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge badge-watch">
+                                {{ stock.recommendation }}
+                            </span>
+
+                        {% endif %}
+
+
+                        {% if stock.early_trend %}
+
+                            <span class="badge badge-early">
+                                EARLY TREND
+                            </span>
+
+                        {% endif %}
+
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            
+
+
+            <div class="opportunity-panel">
+
+                <div class="opportunity-score
+                    {% if stock.opportunity_score >= 85 %}
+                        score-excellent
+                    {% elif stock.opportunity_score >= 75 %}
+                        score-good
+                    {% elif stock.opportunity_score >= 65 %}
+                        score-watch
+                    {% else %}
+                        score-low
+                    {% endif %}
+                ">
+                    {{ "%.2f"|format(stock.opportunity_score) }}
+                </div>
+
+                <div class="opportunity-explanation">
+
+                    <div class="opportunity-explanation-title">
+                        WHY THIS SCORE?
+                    </div>
+
+                    {% for reason in stock.opportunity_reasons %}
+                        <div class="opportunity-reason">
+                            ✓ {{ reason }}
+                        </div>
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- ============================================= -->
+        <!-- TRADE PLAN -->
+        <!-- ============================================= -->
+
+        <div class="trade-grid">
+
+
+            <div class="trade-item trade-current">
+
+                <div class="metric-label">
+                    Current Price
+                </div>
+
+                <div class="metric-value price-value">
+                    {{ stock.price | rupiah }}
+                </div>
+
+                </div>
+
+                <div class="trade-item trade-status-box">
+
+                    <div class="metric-label">
+                        Trade Status
+                    </div>
+
+                    <div class="metric-value
+                        {% if stock.entry_status in ['IN ENTRY ZONE', 'ENTRY ZONE'] %}
+                            trade-status-good
+                        {% elif stock.entry_status == 'ABOVE ENTRY' %}
+                            trade-status-watch
+                        {% elif stock.entry_status in ['WAIT', 'BELOW ENTRY'] %}
+                            trade-status-wait
+                        {% else %}
+                            trade-status-neutral
+                        {% endif %}
+                    ">
+                        {{ stock.entry_status }}
+                    </div>
+
+                    <div class="trade-status-distance">
+                        {% if stock.distance_from_entry_high is not none %}
+                            {% if stock.distance_from_entry_high > 0 %}
+                                +{{ "%.2f"|format(stock.distance_from_entry_high) }}% dari Entry Zone
+                            {% elif stock.distance_from_entry_high < 0 %}
+                                {{ "%.2f"|format(stock.distance_from_entry_high) }}% dari Entry Zone
+                            {% else %}
+                                Tepat di batas Entry Zone
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <div class="trade-status-action">
+                        ACTION:
+                        <span class="
+                            {% if stock.entry_recommendation == 'BUY' %}
+                                action-buy
+                            {% elif stock.entry_recommendation == 'BREAKOUT BUY' %}
+                                action-breakout
+                            {% elif stock.entry_recommendation == 'BUY ON WEAKNESS' %}
+                                action-bow
+                            {% elif stock.entry_recommendation == 'WAIT' %}
+                                action-wait
+                            {% else %}
+                                action-neutral
+                            {% endif %}
+                        ">
+                            {{ stock.entry_recommendation }}
+                        </span>
+                    </div>
+
+                </div>
+
+
+            <div class="trade-item trade-entry">
+
+                <div class="metric-label">
+                    Entry Zone
+                </div>
+
+                <div class="metric-value">
+                    {{ stock.entry_low | rupiah }}
+                    -
+                    {{ stock.entry_high | rupiah }}
+                </div>
+
+            </div>
+
+
+            <div class="trade-item trade-stop">
+
+                <div class="metric-label">
+                    Stop Loss
+                </div>
+
+                <div class="metric-value stop-value">
+                    {{ stock.stop_loss | rupiah }}
+                </div>
+
+            </div>
+
+
+            <div class="trade-item trade-target">
+
+                <div class="metric-label">
+                    TP1
+                </div>
+
+                <div class="metric-value target-value">
+                    {{ stock.target1 | rupiah }}
+                </div>
+
+            </div>
+
+
+            <div class="trade-item trade-target">
+
+                <div class="metric-label">
+                    TP2
+                </div>
+
+                <div class="metric-value target-value">
+                    {{ stock.target2 | rupiah }}
+                </div>
+
+            </div>
+
+
+            <div class="trade-item trade-rr">
+
+                <div class="metric-label">
+                    R:R TP1
+                </div>
+
+                <div class="metric-value
+                    {% if stock.rr1 >= 2 %}
+                        rr-good
+                    {% elif stock.rr1 >= 1 %}
+                        rr-watch
+                    {% else %}
+                        rr-bad
+                    {% endif %}
+                ">
+                    1 : {{ "%.2f"|format(stock.rr1) }}
+                </div>
+
+            </div>
+
+            <div class="
+                trade-item
+                valuation-trade-box
+
+                {% if stock.get('valuation_status') in ['VERY UNDERVALUED', 'UNDERVALUED'] %}
+                    valuation-positive
+
+                {% elif stock.get('valuation_status') in ['FAIR', 'FAIRLY VALUED', 'FAIR VALUE'] %}
+                    valuation-neutral
+
+                {% elif stock.get('valuation_status') == 'OVERVALUED' %}
+                    valuation-warning
+
+                {% elif stock.get('valuation_status') == 'VERY OVERVALUED' %}
+                    valuation-negative
+
+                {% else %}
+                    valuation-neutral
+                {% endif %}
+            ">
+
+                <div class="trade-label">
+                    HARGA WAJAR
+                </div>
+
+                <div class="valuation-fair-value">
+                    {{ stock.get('fair_value', 0) | rupiah }}
+                </div>
+
+                <div class="valuation-status">
+                    {{ stock.get('valuation_status', '-') }}
+                </div>
+
+                <div class="valuation-details">
+
+                    <span>
+                        MOS
+                        <strong>
+                            {{ "%.1f"|format(stock.get('margin_of_safety', 0)) }}%
+                        </strong>
+                    </span>
+
+                    <span>
+                        Reliability
+                        <strong>
+                            {{ stock.get('valuation_reliability', '-') }}
+                        </strong>
+                    </span>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- ============================================= -->
+        <!-- TECHNICAL DATA -->
+        <!-- ============================================= -->
+
+        <div class="technical-grid">
+
+            <div class="
+                {% if 'Bullish' in stock.trend %}
+                    technical-box-positive
+                {% elif 'Bearish' in stock.trend %}
+                    technical-box-negative
+                {% else %}
+                    technical-box-neutral
+                {% endif %}
+            ">
+
+                <div class="metric-label">
+                    Trend
+                </div>
+
+                <div class="technical-value
+                    {% if 'Bullish' in stock.trend %}
+                        technical-bullish
+                    {% elif 'Bearish' in stock.trend %}
+                        technical-bearish
+                    {% endif %}
+                ">
+                    {{ stock.trend }}
+                </div>
+
+            </div>
+
+
+            <div class="
+                {% if 'Bullish' in stock.macd %}
+                    technical-box-positive
+                {% elif 'Bearish' in stock.macd %}
+                    technical-box-negative
+                {% else %}
+                    technical-box-neutral
+                {% endif %}
+            ">
+
+                <div class="metric-label">
+                    MACD
+                </div>
+
+                <div class="technical-value
+                    {% if 'Bullish' in stock.macd %}
+                        technical-bullish
+                    {% elif 'Bearish' in stock.macd %}
+                        technical-bearish
+                    {% endif %}
+                ">
+                    {{ stock.macd }}
+                </div>
+
+            </div>
+
+            <div class="
+                {% if stock.rsi >= 50 and stock.rsi <= 70 %}
+                    technical-box-positive
+                {% elif stock.rsi > 75 %}
+                    technical-box-negative
+                {% else %}
+                    technical-box-neutral
+                {% endif %}
+            ">
+                <div class="metric-label">RSI</div>
+
+                <div class="technical-value
+                    {% if stock.rsi >= 50 and stock.rsi <= 70 %}
+                        technical-bullish
+                    {% elif stock.rsi > 75 %}
+                        technical-bearish
+                    {% endif %}
+                ">
+                    {{ stock.rsi }}
+                </div>
+            </div>
+
+
+            <div class="
+                {% if stock.relative_volume >= 1.5 %}
+                    technical-box-positive
+                {% elif stock.relative_volume < 0.5 %}
+                    technical-box-negative
+                {% else %}
+                    technical-box-neutral
+                {% endif %}
+            ">
+                <div class="metric-label">Relative Volume</div>
+
+                <div class="technical-value
+                    {% if stock.relative_volume >= 1.5 %}
+                        technical-bullish
+                    {% elif stock.relative_volume < 0.5 %}
+                        technical-bearish
+                    {% endif %}
+                ">
+                    {{ stock.relative_volume }}
+                </div>
+            </div>
+
+
+            <div class="
+                {% if stock.liquidity in ['VERY LIQUID', 'LIQUID'] %}
+                    technical-box-positive
+                {% elif stock.liquidity in ['LOW LIQUIDITY', 'ILLIQUID'] %}
+                    technical-box-negative
+                {% else %}
+                    technical-box-neutral
+                {% endif %}
+            ">
+                <div class="metric-label">Liquidity</div>
+
+                <div class="technical-value
+                    {% if stock.liquidity_status in ['VERY LIQUID', 'LIQUID'] %}
+                        technical-bullish
+                    {% elif stock.liquidity_status in ['LOW LIQUIDITY', 'ILLIQUID'] %}
+                        technical-bearish
+                    {% endif %}
+                ">
+                    {{ stock.liquidity_status }}
+                </div>
+            </div>
+
+
+            <div class="
+                {% if stock.confidence >= 85 %}
+                    confidence-box-high
+                {% elif stock.confidence >= 70 %}
+                    confidence-box-good
+                {% elif stock.confidence >= 50 %}
+                    confidence-box-watch
+                {% else %}
+                    confidence-box-low
+                {% endif %}
+            ">
+
+                <div class="metric-label">
+                    Confidence
+                </div>
+
+                <div class="technical-value
+                    {% if stock.confidence >= 85 %}
+                        confidence-high
+                    {% elif stock.confidence >= 70 %}
+                        confidence-good
+                    {% elif stock.confidence >= 50 %}
+                        confidence-watch
+                    {% else %}
+                        confidence-low
+                    {% endif %}
+                ">
+                    {{ stock.confidence }}%
+                    {{ stock.confidence_level }}
+                </div>
+
+            </div>
+
+
+        </div>
+
+        <!-- ============================================= -->
+        <!-- MULTI TIMEFRAME -->
+        <!-- ============================================= -->
+
+        <div class="mtf-panel">
+
+            <div class="mtf-title">
+                MULTI TIMEFRAME
+            </div>
+
+            <div class="mtf-grid">
+
+                <div class="mtf-item">
+                    <div class="mtf-label">Monthly</div>
+                    <div class="mtf-value
+                        {% if 'Bullish' in stock.monthly_trend %}
+                            mtf-bullish
+                        {% elif stock.monthly_trend == 'Recovery' %}
+                            mtf-recovery
+                        {% elif 'Bearish' in stock.monthly_trend %}
+                            mtf-bearish
+                        {% else %}
+                            mtf-neutral
+                        {% endif %}
+                    ">
+                        {{ stock.monthly_trend }}
+                    </div>
+                </div>
+
+                <div class="mtf-item">
+                    <div class="mtf-label">Weekly</div>
+                    <div class="mtf-value
+                        {% if 'Bullish' in stock.weekly_trend %}
+                            mtf-bullish
+                        {% elif stock.weekly_trend == 'Recovery' %}
+                            mtf-recovery
+                        {% elif 'Bearish' in stock.weekly_trend %}
+                            mtf-bearish
+                        {% else %}
+                            mtf-neutral
+                        {% endif %}
+                    ">
+                        {{ stock.weekly_trend }}
+                    </div>
+                </div>
+
+                <div class="mtf-item">
+                    <div class="mtf-label">Daily</div>
+                    <div class="mtf-value
+                        {% if 'Bullish' in stock.daily_trend %}
+                            mtf-bullish
+                        {% elif stock.daily_trend == 'Recovery' %}
+                            mtf-recovery
+                        {% elif 'Bearish' in stock.daily_trend %}
+                            mtf-bearish
+                        {% else %}
+                            mtf-neutral
+                        {% endif %}
+                    ">
+                        {{ stock.daily_trend }}
+                    </div>
+                </div>
+
+                <div class="mtf-item">
+                    <div class="mtf-label">4H</div>
+                    <div class="mtf-value
+                        {% if 'Bullish' in stock.h4_trend %}
+                            mtf-bullish
+                        {% elif stock.h4_trend == 'Recovery' %}
+                            mtf-recovery
+                        {% elif 'Bearish' in stock.h4_trend %}
+                            mtf-bearish
+                        {% else %}
+                            mtf-neutral
+                        {% endif %}
+                    ">
+                        {{ stock.h4_trend }}
+                    </div>
+                </div>
+
+                <div class="mtf-item">
+                    <div class="mtf-label">1H</div>
+                    <div class="mtf-value
+                        {% if 'Bullish' in stock.h1_trend %}
+                            mtf-bullish
+                        {% elif stock.h1_trend == 'Recovery' %}
+                            mtf-recovery
+                        {% elif 'Bearish' in stock.h1_trend %}
+                            mtf-bearish
+                        {% else %}
+                            mtf-neutral
+                        {% endif %}
+                    ">
+                        {{ stock.h1_trend }}
+                    </div>
+                </div>
+
+                <div class="mtf-item mtf-summary">
+                    <div class="mtf-label">
+                        Swing MTF
+                    </div>
+
+                    <div class="mtf-score">
+                        {{ stock.mtf_average_score }} / 100
+                    </div>
+
+                    <div class="mtf-status
+                        {% if 'BULLISH' in stock.mtf_status %}
+                            mtf-bullish
+                        {% elif 'BEARISH' in stock.mtf_status %}
+                            mtf-bearish
+                        {% else %}
+                            mtf-neutral
+                        {% endif %}
+                    ">
+                        {{ stock.mtf_status }}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ============================================= -->
+        <!-- ANALYSIS -->
+        <!-- ============================================= -->
+
+        <div class="analysis">
+
+            <div class="analysis-title">
+                ANALYSIS
+            </div>
+
+            <div class="analysis-text">
+                {{ stock.entry_reason }}
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    {% endmacro %}

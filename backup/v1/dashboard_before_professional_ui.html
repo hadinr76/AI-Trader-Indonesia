@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Trader Indonesia</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+        }
+
+        .header {
+            background: #1f2937;
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .scan-button {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            padding: 12px 20px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .scan-button:hover {
+            background: #1d4ed8;
+        }
+
+        .tabs {
+            margin-top: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            border: none;
+            background: #e5e7eb;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .filter-btn:hover {
+            background: #d1d5db;
+        }
+
+        .filter-btn.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        .category-title {
+            margin-top: 10px;
+            margin-bottom: 20px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .category-section {
+            display: none;
+        }
+
+        .category-section.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stock-code {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .score {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 10px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            background: #e5e7eb;
+            font-weight: bold;
+        }
+
+        .details {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .label {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .value {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 3px;
+        }
+
+        .analysis {
+            margin-top: 18px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .analysis-text {
+            font-size: 16px;
+            margin-top: 3px;
+            font-weight: normal;
+            line-height: 1.6;
+        }
+
+        .empty-category {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 700px) {
+
+            .details {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .filter-btn {
+                flex-grow: 1;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+<div class="header">
+
+    <h1>AI TRADER INDONESIA</h1>
+
+    <p>Daily Stock Opportunity Scanner</p>
+
+</div>
+
+
+<div class="container">
+
+
+    <!-- ===================================================== -->
+    <!-- TOMBOL SCREENING -->
+    <!-- HANYA TOMBOL INI YANG MENJALANKAN /scan -->
+    <!-- ===================================================== -->
+
+    <div>
+
+        <a href="/scan" class="scan-button">
+            JALANKAN SCREENING
+        </a>
+
+    </div>
+
+
+    {% if not stocks %}
+
+        <div class="card" style="margin-top:20px;">
+
+            <h2>Belum Ada Hasil Screening</h2>
+
+            <p>
+                Klik tombol <b>JALANKAN SCREENING</b>
+                untuk mencari peluang saham hari ini.
+            </p>
+
+        </div>
+
+    {% else %}
+
+
+    <!-- ===================================================== -->
+    <!-- TAB KATEGORI -->
+    <!-- TIDAK MENJALANKAN SCREENING -->
+    <!-- ===================================================== -->
+
+    <div class="tabs">
+
+        <button
+            type="button"
+            class="filter-btn active"
+            data-category="top"
+            onclick="showCategory('top', this)">
+            TOP OPPORTUNITIES
+        </button>
+
+        <button
+            type="button"
+            class="filter-btn"
+            data-category="buy_now"
+            onclick="showCategory('buy_now', this)">
+            BUY NOW
+        </button>
+
+        <button
+            type="button"
+            class="filter-btn"
+            data-category="breakout"
+            onclick="showCategory('breakout', this)">
+            BREAKOUT BUY
+        </button>
+
+        <button
+            type="button"
+            class="filter-btn"
+            data-category="bow"
+            onclick="showCategory('bow', this)">
+            BUY ON WEAKNESS
+        </button>
+
+        <button
+            type="button"
+            class="filter-btn"
+            data-category="near_buy"
+            onclick="showCategory('near_buy', this)">
+            NEAR BUY
+        </button>
+
+        <button
+            type="button"
+            class="filter-btn"
+            data-category="early_trend"
+            onclick="showCategory('early_trend', this)">
+            EARLY TREND
+        </button>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- MACRO UNTUK CARD SAHAM -->
+    <!-- ===================================================== -->
+
+    {% macro stock_card(stock, rank) %}
+
+    <div class="card">
+
+        <div class="stock-header">
+
+            <div class="stock-code">
+                #{{ rank }} {{ stock.code }}
+            </div>
+
+            <div class="score">
+                {{ stock.opportunity_score }}
+            </div>
+
+        </div>
+
+
+        <p>
+
+            <span class="badge">
+                {{ stock.watchlist_status }}
+            </span>
+
+            <span class="badge">
+                {{ stock.recommendation }}
+            </span>
+
+        </p>
+
+
+        <div class="details">
+
+            <div>
+                <div class="label">Current Price</div>
+                <div class="value">
+                    {{ stock.price }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">Entry Zone</div>
+                <div class="value">
+                    {{ stock.entry_low }} - {{ stock.entry_high }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">Stop Loss</div>
+                <div class="value">
+                    {{ stock.stop_loss }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">TP1</div>
+                <div class="value">
+                    {{ stock.target1 }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">TP2</div>
+                <div class="value">
+                    {{ stock.target2 }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">R:R TP1</div>
+                <div class="value">
+                    {{ stock.rr1 }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">Trend</div>
+                <div class="value">
+                    {{ stock.trend }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">MACD</div>
+                <div class="value">
+                    {{ stock.macd }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">RSI</div>
+                <div class="value">
+                    {{ stock.rsi }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">Relative Volume</div>
+                <div class="value">
+                    {{ stock.relative_volume }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">Liquidity</div>
+                <div class="value">
+                    {{ stock.liquidity_status }}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">Confidence</div>
+                <div class="value">
+                    {{ stock.confidence }}%
+                    {{ stock.confidence_level }}
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="analysis">
+
+            <div class="label">
+                Analysis
+            </div>
+
+            <div class="analysis-text">
+                {{ stock.entry_reason }}
+            </div>
+
+        </div>
+
+    </div>
+
+    {% endmacro %}
+
+
+    <!-- ===================================================== -->
+    <!-- TOP OPPORTUNITIES -->
+    <!-- ===================================================== -->
+
+    <div
+        id="category-top"
+        class="category-section active">
+
+        <div class="category-title">
+            TOP OPPORTUNITIES
+            ({{ top_opportunities|length }})
+        </div>
+
+        {% for stock in top_opportunities %}
+
+            {{ stock_card(stock, loop.index) }}
+
+        {% endfor %}
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- BUY NOW -->
+    <!-- ===================================================== -->
+
+    <div
+        id="category-buy_now"
+        class="category-section">
+
+        <div class="category-title">
+            BUY NOW
+            ({{ buy_now|length }})
+        </div>
+
+        {% if buy_now %}
+
+            {% for stock in buy_now %}
+
+                {{ stock_card(stock, loop.index) }}
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="empty-category">
+                Tidak ada kandidat BUY NOW pada screening terakhir.
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- BREAKOUT BUY -->
+    <!-- ===================================================== -->
+
+    <div
+        id="category-breakout"
+        class="category-section">
+
+        <div class="category-title">
+            BREAKOUT BUY
+            ({{ breakout_buy|length }})
+        </div>
+
+        {% if breakout_buy %}
+
+            {% for stock in breakout_buy %}
+
+                {{ stock_card(stock, loop.index) }}
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="empty-category">
+                Tidak ada kandidat BREAKOUT BUY pada screening terakhir.
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- BUY ON WEAKNESS -->
+    <!-- ===================================================== -->
+
+    <div
+        id="category-bow"
+        class="category-section">
+
+        <div class="category-title">
+            BUY ON WEAKNESS
+            ({{ buy_on_weakness|length }})
+        </div>
+
+        {% if buy_on_weakness %}
+
+            {% for stock in buy_on_weakness %}
+
+                {{ stock_card(stock, loop.index) }}
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="empty-category">
+                Tidak ada kandidat BUY ON WEAKNESS pada screening terakhir.
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- NEAR BUY -->
+    <!-- ===================================================== -->
+
+    <div
+        id="category-near_buy"
+        class="category-section">
+
+        <div class="category-title">
+            NEAR BUY
+            ({{ near_buy|length }})
+        </div>
+
+        {% if near_buy %}
+
+            {% for stock in near_buy %}
+
+                {{ stock_card(stock, loop.index) }}
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="empty-category">
+                Tidak ada kandidat NEAR BUY pada screening terakhir.
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- EARLY TREND -->
+    <!-- ===================================================== -->
+
+    <div
+        id="category-early_trend"
+        class="category-section">
+
+        <div class="category-title">
+            EARLY TREND
+            ({{ early_trend|length }})
+        </div>
+
+        {% if early_trend %}
+
+            {% for stock in early_trend %}
+
+                {{ stock_card(stock, loop.index) }}
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="empty-category">
+                Tidak ada kandidat EARLY TREND pada screening terakhir.
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    {% endif %}
+
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- TAB JAVASCRIPT -->
+<!-- HANYA MENGGANTI TAMPILAN -->
+<!-- TIDAK MEMANGGIL /scan -->
+<!-- ========================================================= -->
+
+<script>
+
+    function showCategory(category, button) {
+
+        const sections =
+            document.querySelectorAll(
+                '.category-section'
+            );
+
+        sections.forEach(function(section) {
+            section.classList.remove('active');
+        });
+
+
+        const buttons =
+            document.querySelectorAll(
+                '.filter-btn'
+            );
+
+        buttons.forEach(function(btn) {
+            btn.classList.remove('active');
+        });
+
+
+        const selected =
+            document.getElementById(
+                'category-' + category
+            );
+
+        if (selected) {
+            selected.classList.add('active');
+        }
+
+
+        if (button) {
+            button.classList.add('active');
+        }
+
+    }
+
+</script>
+
+
+</body>
+
+</html>
