@@ -149,7 +149,7 @@ class MarketData:
             progress=False,
             auto_adjust=False,
             group_by="ticker",
-            threads=True
+            threads=False
         )
 
         # =====================================
