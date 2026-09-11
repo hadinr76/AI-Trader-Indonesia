@@ -28,6 +28,12 @@ from ai.summary import AISummary
 
 from decision.decision_engine_v4 import DecisionEngineV4
 
+from analysis.swing_detector import SwingDetector
+from analysis.sr_structure import SRStructure
+from analysis.fibonacci_engine import FibonacciEngine
+from analysis.confluence_engine import ConfluenceEngine
+from analysis.trade_area_engine import TradeAreaEngine
+
 
 class AIEngine:
 
@@ -56,6 +62,44 @@ class AIEngine:
         technical_score = technical["score"]
         trend = technical["trend"]
         rsi = technical["rsi"]
+
+        # =====================================================
+        # MARKET STRUCTURE ANALYSIS
+        # =====================================================
+
+        current_price = float(
+            technical["price"]
+        )
+
+        swing = SwingDetector.detect(
+            data,
+            window=3,
+            lookback=120
+        )
+
+        sr_structure = SRStructure.calculate(
+            current_price=current_price,
+            swing_highs=swing["swing_highs"],
+            swing_lows=swing["swing_lows"]
+        )
+
+        fibonacci = FibonacciEngine.calculate(
+            current_price=current_price,
+            swing_highs=swing["swing_highs"],
+            swing_lows=swing["swing_lows"]
+        )
+
+        confluence = ConfluenceEngine.calculate(
+            current_price=current_price,
+            sr_structure=sr_structure,
+            fibonacci=fibonacci
+        )
+
+        trade_area = TradeAreaEngine.calculate(
+            current_price=current_price,
+            confluence=confluence,
+            sr_structure=sr_structure
+        )
 
         # =====================================================
         # SIGNAL ENGINE
@@ -402,6 +446,49 @@ class AIEngine:
             "support": technical["support"],
 
             "resistance": technical["resistance"],
+
+                        # Market Structure V2
+            "major_support": sr_structure["major_support"],
+
+            "minor_support": sr_structure["minor_support"],
+
+            "minor_resistance": sr_structure["minor_resistance"],
+
+            "major_resistance": sr_structure["major_resistance"],
+
+            # Fibonacci
+            "fib_382": fibonacci["fib_382"],
+
+            "fib_500": fibonacci["fib_500"],
+
+            "fib_618": fibonacci["fib_618"],
+
+            "fib_786": fibonacci["fib_786"],
+
+            # Trade Area V2
+            "buy_area_low": trade_area["buy_area_low"],
+
+            "buy_area_high": trade_area["buy_area_high"],
+
+            "ideal_entry_v2": trade_area["ideal_entry"],
+
+            "stop_loss_v2": trade_area["stop_loss"],
+
+            "target1_v2": trade_area["tp1"],
+
+            "target2_v2": trade_area["tp2"],
+
+            "rr1_v2": trade_area["rr_tp1"],
+
+            "rr2_v2": trade_area["rr_tp2"],
+
+            "trade_status": trade_area["status"],
+
+            "trade_quality": trade_area["trade_quality"],
+
+            "trade_reason": trade_area["trade_reason"],
+
+            "confluence_score": trade_area["confluence_score"],
 
             "technical_score": technical_score,
 
