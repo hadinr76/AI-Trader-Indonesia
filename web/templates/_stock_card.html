@@ -671,6 +671,66 @@
 
         </div>
 
+        <!-- ============================================= -->
+        <!-- MARKET STRUCTURE V2 -->
+        <!-- ============================================= -->
+
+        {% if stock.get('major_support') is not none %}
+
+        <div class="analysis">
+
+            <div class="analysis-title">
+                MARKET STRUCTURE V2
+            </div>
+
+            <div class="analysis-text">
+
+                <strong>Major Support:</strong>
+                {{ stock.get('major_support', 0) | rupiah }}
+
+                &nbsp; | &nbsp;
+
+                <strong>Minor Support:</strong>
+                {{ stock.get('minor_support', 0) | rupiah }}
+
+                <br>
+
+                <strong>Minor Resistance:</strong>
+                {{ stock.get('minor_resistance', 0) | rupiah }}
+
+                &nbsp; | &nbsp;
+
+                <strong>Major Resistance:</strong>
+                {{ stock.get('major_resistance', 0) | rupiah }}
+
+                <br><br>
+
+                <strong>Fibonacci:</strong>
+
+                38.2% =
+                {{ stock.get('fib_382', 0) | rupiah }}
+
+                &nbsp; | &nbsp;
+
+                50% =
+                {{ stock.get('fib_500', 0) | rupiah }}
+
+                &nbsp; | &nbsp;
+
+                61.8% =
+                {{ stock.get('fib_618', 0) | rupiah }}
+
+                &nbsp; | &nbsp;
+
+                78.6% =
+                {{ stock.get('fib_786', 0) | rupiah }}
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
 
         <!-- ============================================= -->
         <!-- ANALYSIS -->
@@ -683,7 +743,7 @@
             </div>
 
             <div class="analysis-text">
-                {{ stock.entry_reason }}
+                {{ stock.get('trade_reason', stock.get('entry_reason', '-')) }}
             </div>
 
         </div>

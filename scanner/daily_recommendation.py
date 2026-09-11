@@ -1343,6 +1343,28 @@ class DailyRecommendation:
                     "major_resistance"
                 ),
 
+            # Fibonacci V2
+
+            "fib_382":
+                fibonacci_v2.get(
+                    "fib_382"
+                ),
+
+            "fib_500":
+                fibonacci_v2.get(
+                    "fib_500"
+                ),
+
+            "fib_618":
+                fibonacci_v2.get(
+                    "fib_618"
+                ),
+
+            "fib_786":
+                fibonacci_v2.get(
+                    "fib_786"
+                ),
+
             "buy_area_low":
                 trade_area_v2.get(
                     "buy_area_low"
