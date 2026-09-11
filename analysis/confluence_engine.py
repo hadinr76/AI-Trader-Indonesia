@@ -5,6 +5,7 @@ class ConfluenceEngine:
         current_price,
         sr_structure,
         fibonacci,
+        demand_zones=None,
         tolerance_pct=2.0
     ):
 
@@ -63,6 +64,41 @@ class ConfluenceEngine:
                 "name": name,
                 "price": float(price)
             })
+
+        # ==========================================
+        # DEMAND ZONE
+        # ==========================================
+
+        demand_levels = []
+
+        if demand_zones:
+
+            for i, zone in enumerate(demand_zones):
+
+                if zone.get("status") != "ACTIVE":
+                    continue
+
+                zone_low = zone.get("zone_low")
+                zone_high = zone.get("zone_high")
+
+                if (
+                    zone_low is None
+                    or zone_high is None
+                ):
+                    continue
+
+                zone_mid = (
+                    float(zone_low) +
+                    float(zone_high)
+                ) / 2
+
+                demand_levels.append({
+                    "type": "DEMAND",
+                    "name": f"demand_zone_{i}",
+                    "price": zone_mid,
+                    "zone_low": float(zone_low),
+                    "zone_high": float(zone_high)
+                })
 
         # ==========================================
         # BOBOT CONFLUENCE
@@ -137,6 +173,58 @@ class ConfluenceEngine:
                         fib
                     )
 
+            # --------------------------------------
+            # CARI DEMAND ZONE TERDEKAT
+            # --------------------------------------
+
+            nearest_demand = None
+            nearest_distance = None
+
+            for demand in demand_levels:
+
+                zone_low = demand["zone_low"]
+                zone_high = demand["zone_high"]
+
+                if zone_low <= anchor_price <= zone_high:
+
+                    distance_pct = 0
+
+                else:
+
+                    nearest_price = min(
+                        [zone_low, zone_high],
+                        key=lambda x: abs(
+                            x - anchor_price
+                        )
+                    )
+
+                    distance_pct = (
+                        abs(
+                            nearest_price -
+                            anchor_price
+                        )
+                        /
+                        anchor_price
+                        * 100
+                    )
+
+                if distance_pct <= tolerance_pct:
+
+                    if (
+                        nearest_distance is None
+                        or
+                        distance_pct < nearest_distance
+                    ):
+
+                        nearest_distance = distance_pct
+                        nearest_demand = demand
+
+            if nearest_demand is not None:
+
+                zone_levels.append(
+                    nearest_demand
+                )
+
             # ======================================
             # HAPUS DUPLIKAT
             # ======================================
@@ -157,18 +245,44 @@ class ConfluenceEngine:
             # HITUNG SCORE
             # ======================================
 
-            score = sum(
-                weights.get(
-                    level["name"],
-                    0
-                )
-                for level in zone_levels
-            )
+            score = 0
 
-            prices = [
-                level["price"]
+            for level in zone_levels:
+
+                if level["type"] == "DEMAND":
+                    score += 3
+
+                else:
+                    score += weights.get(
+                        level["name"],
+                        0
+                    )
+
+            prices = []
+
+            non_demand_levels = [
+                level
                 for level in zone_levels
+                if level["type"] != "DEMAND"
             ]
+
+            for level in non_demand_levels:
+                prices.append(
+                    level["price"]
+                )
+
+            # Jika hanya ada satu level utama,
+            # gunakan Demand Zone sebagai pembentuk area
+            if (
+                len(non_demand_levels) == 1
+                and nearest_demand is not None
+            ):
+                prices.append(
+                    nearest_demand["zone_low"]
+                )
+                prices.append(
+                    nearest_demand["zone_high"]
+                )
 
             zones.append({
                 "score": score,
@@ -241,5 +355,25 @@ class ConfluenceEngine:
             zones,
             key=lambda x: x["total_score"]
         )
+
+        # ==========================================
+        # DEMAND ZONE TERPILIH
+        # ==========================================
+
+        selected_demand = None
+
+        for level in best_zone["levels"]:
+
+            if level.get("type") == "DEMAND":
+
+                selected_demand = {
+                    "zone_low": level.get("zone_low"),
+                    "zone_high": level.get("zone_high"),
+                    "name": level.get("name")
+                }
+
+                break
+
+        best_zone["demand_zone"] = selected_demand
 
         return best_zone

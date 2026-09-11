@@ -27,6 +27,7 @@ from analysis.sr_structure import SRStructure
 from analysis.fibonacci_engine import FibonacciEngine
 from analysis.confluence_engine import ConfluenceEngine
 from analysis.trade_area_engine import TradeAreaEngine
+from analysis.demand_zone import DemandZone
 
 
 class DailyRecommendation:
@@ -940,10 +941,16 @@ class DailyRecommendation:
                 swing_lows=swing_v2["swing_lows"]
             )
 
+            demand_zones_v2 = DemandZone.detect(
+                data_v2,
+                lookback=120
+            )
+
             confluence_v2 = ConfluenceEngine.calculate(
                 current_price=current_price_v2,
                 sr_structure=sr_v2,
-                fibonacci=fibonacci_v2
+                fibonacci=fibonacci_v2,
+                demand_zones=demand_zones_v2
             )
 
             trade_area_v2 = TradeAreaEngine.calculate(
@@ -961,6 +968,8 @@ class DailyRecommendation:
 
             sr_v2 = {}
             fibonacci_v2 = {}
+            demand_zones_v2 = []
+            confluence_v2 = {}
             trade_area_v2 = {}
 
         # =================================================
@@ -1429,6 +1438,16 @@ class DailyRecommendation:
                 trade_area_v2.get(
                     "confluence_score"
                 ),
+
+            "demand_zone_low":
+                (
+                    confluence_v2.get("demand_zone") or {}
+                ).get("zone_low"),
+
+            "demand_zone_high":
+                (
+                    confluence_v2.get("demand_zone") or {}
+                ).get("zone_high"),
 
             # Risk Reward
 

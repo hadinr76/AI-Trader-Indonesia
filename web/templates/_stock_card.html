@@ -705,6 +705,13 @@
 
                 <br><br>
 
+                <strong>Demand Zone:</strong>
+                {{ stock.get('demand_zone_low', 0) | rupiah }}
+                -
+                {{ stock.get('demand_zone_high', 0) | rupiah }}
+
+                <br><br>
+
                 <strong>Fibonacci:</strong>
 
                 38.2% =
