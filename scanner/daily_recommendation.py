@@ -20,6 +20,14 @@ from valuation.valuation_engine import ValuationEngine
 
 from decision.decision_engine_v4 import DecisionEngineV4
 
+from data.market_data import MarketData
+
+from analysis.swing_detector import SwingDetector
+from analysis.sr_structure import SRStructure
+from analysis.fibonacci_engine import FibonacciEngine
+from analysis.confluence_engine import ConfluenceEngine
+from analysis.trade_area_engine import TradeAreaEngine
+
 
 class DailyRecommendation:
 
@@ -898,6 +906,64 @@ class DailyRecommendation:
         )
 
         # =================================================
+        # MARKET STRUCTURE V2
+        # =================================================
+
+        try:
+
+            market = MarketData()
+
+            data_v2 = market.get_daily(
+                code,
+                period="1y"
+            )
+
+            current_price_v2 = float(
+                stock["price"]
+            )
+
+            swing_v2 = SwingDetector.detect(
+                data_v2,
+                window=3,
+                lookback=120
+            )
+
+            sr_v2 = SRStructure.calculate(
+                current_price=current_price_v2,
+                swing_highs=swing_v2["swing_highs"],
+                swing_lows=swing_v2["swing_lows"]
+            )
+
+            fibonacci_v2 = FibonacciEngine.calculate(
+                current_price=current_price_v2,
+                swing_highs=swing_v2["swing_highs"],
+                swing_lows=swing_v2["swing_lows"]
+            )
+
+            confluence_v2 = ConfluenceEngine.calculate(
+                current_price=current_price_v2,
+                sr_structure=sr_v2,
+                fibonacci=fibonacci_v2
+            )
+
+            trade_area_v2 = TradeAreaEngine.calculate(
+                current_price=current_price_v2,
+                confluence=confluence_v2,
+                sr_structure=sr_v2
+            )
+
+        except Exception as e:
+
+            print(
+                f"Market Structure V2 {code} gagal: "
+                f"{e}"
+            )
+
+            sr_v2 = {}
+            fibonacci_v2 = {}
+            trade_area_v2 = {}
+
+        # =================================================
         # MARKET REGIME
         #
         # Sementara dibuat neutral.
@@ -1253,6 +1319,93 @@ class DailyRecommendation:
                 entry.get(
                     "distance_from_entry_high",
                     0
+                ),
+
+            # Market Structure V2
+
+            "major_support":
+                sr_v2.get(
+                    "major_support"
+                ),
+
+            "minor_support":
+                sr_v2.get(
+                    "minor_support"
+                ),
+
+            "minor_resistance":
+                sr_v2.get(
+                    "minor_resistance"
+                ),
+
+            "major_resistance":
+                sr_v2.get(
+                    "major_resistance"
+                ),
+
+            "buy_area_low":
+                trade_area_v2.get(
+                    "buy_area_low"
+                ),
+
+            "buy_area_high":
+                trade_area_v2.get(
+                    "buy_area_high"
+                ),
+
+            "ideal_entry_v2":
+                trade_area_v2.get(
+                    "ideal_entry"
+                ),
+
+            "stop_loss_v2":
+                trade_area_v2.get(
+                    "stop_loss"
+                ),
+
+            "target1_v2":
+                trade_area_v2.get(
+                    "tp1"
+                ),
+
+            "target2_v2":
+                trade_area_v2.get(
+                    "tp2"
+                ),
+
+            "rr1_v2":
+                trade_area_v2.get(
+                    "rr_tp1"
+                ),
+
+            "rr2_v2":
+                trade_area_v2.get(
+                    "rr_tp2"
+                ),
+
+            "trade_status":
+                trade_area_v2.get(
+                    "status"
+                ),
+
+            "trade_quality":
+                trade_area_v2.get(
+                    "trade_quality"
+                ),
+
+            "trade_action":
+                trade_area_v2.get(
+                    "trade_action"
+                ),
+
+            "trade_reason":
+                trade_area_v2.get(
+                    "trade_reason"
+                ),
+
+            "confluence_score":
+                trade_area_v2.get(
+                    "confluence_score"
                 ),
 
             # Risk Reward

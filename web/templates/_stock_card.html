@@ -159,48 +159,93 @@
                     </div>
 
                     <div class="metric-value
-                        {% if stock.entry_status in ['IN ENTRY ZONE', 'ENTRY ZONE'] %}
+                        {% if stock.trade_status == 'IN BUY AREA' %}
                             trade-status-good
-                        {% elif stock.entry_status == 'ABOVE ENTRY' %}
+                        {% elif stock.trade_status == 'WAIT PULLBACK' %}
                             trade-status-watch
-                        {% elif stock.entry_status in ['WAIT', 'BELOW ENTRY'] %}
+                        {% elif stock.trade_status == 'BELOW BUY AREA' %}
                             trade-status-wait
                         {% else %}
                             trade-status-neutral
                         {% endif %}
                     ">
-                        {{ stock.entry_status }}
+                        {{ stock.trade_status }}
                     </div>
 
                     <div class="trade-status-distance">
-                        {% if stock.distance_from_entry_high is not none %}
-                            {% if stock.distance_from_entry_high > 0 %}
-                                +{{ "%.2f"|format(stock.distance_from_entry_high) }}% dari Entry Zone
-                            {% elif stock.distance_from_entry_high < 0 %}
-                                {{ "%.2f"|format(stock.distance_from_entry_high) }}% dari Entry Zone
+
+                        {% set entry_high_display =
+                            stock.get(
+                                'buy_area_high',
+                                stock.get('entry_high', 0)
+                            )
+                        %}
+
+                        {% if entry_high_display and entry_high_display > 0 %}
+
+                            {% set distance_v2 =
+                                ((stock.price - entry_high_display)
+                                / entry_high_display) * 100
+                            %}
+
+                            {% if distance_v2 > 0 %}
+                                +{{ "%.2f"|format(distance_v2) }}% dari Buy Area
+
+                            {% elif distance_v2 < 0 %}
+                                {{ "%.2f"|format(distance_v2) }}% dari Buy Area
+
                             {% else %}
-                                Tepat di batas Entry Zone
+                                Tepat di batas Buy Area
                             {% endif %}
+
                         {% endif %}
+
                     </div>
 
                     <div class="trade-status-action">
+
+                        {% set action_display =
+                            stock.get(
+                                'trade_action',
+                                stock.get('entry_recommendation', 'WAIT')
+                            )
+                        %}
+
                         ACTION:
                         <span class="
-                            {% if stock.entry_recommendation == 'BUY' %}
+                            {% if action_display == 'BUY' %}
                                 action-buy
-                            {% elif stock.entry_recommendation == 'BREAKOUT BUY' %}
+                            {% elif action_display == 'BREAKOUT BUY' %}
                                 action-breakout
-                            {% elif stock.entry_recommendation == 'BUY ON WEAKNESS' %}
+                            {% elif action_display == 'BUY ON WEAKNESS' %}
                                 action-bow
-                            {% elif stock.entry_recommendation == 'WAIT' %}
+                            {% elif action_display == 'WAIT' %}
                                 action-wait
                             {% else %}
                                 action-neutral
                             {% endif %}
                         ">
-                            {{ stock.entry_recommendation }}
+                            {{ action_display }}
                         </span>
+
+                    </div>
+
+                    <div class="trade-status-distance">
+                        QUALITY:
+                        <strong>
+                            {{ stock.get('trade_quality', '-') }}
+                        </strong>
+                    </div>
+
+                    <div class="trade-status-distance">
+                        CONFLUENCE:
+                        <strong>
+                            {{ stock.get('confluence_score', 0) }}
+                        </strong>
+                    </div>
+
+                    <div class="trade-status-distance">
+                        {{ stock.get('trade_reason', '') }}
                     </div>
 
                 </div>
@@ -213,9 +258,9 @@
                 </div>
 
                 <div class="metric-value">
-                    {{ stock.entry_low | rupiah }}
+                    {{ stock.get('buy_area_low', stock.get('entry_low', 0)) | rupiah }}
                     -
-                    {{ stock.entry_high | rupiah }}
+                    {{ stock.get('buy_area_high', stock.get('entry_high', 0)) | rupiah }}
                 </div>
 
             </div>
@@ -228,7 +273,7 @@
                 </div>
 
                 <div class="metric-value stop-value">
-                    {{ stock.stop_loss | rupiah }}
+                    {{ stock.get('stop_loss_v2', stock.get('stop_loss', 0)) | rupiah }}
                 </div>
 
             </div>
@@ -241,7 +286,7 @@
                 </div>
 
                 <div class="metric-value target-value">
-                    {{ stock.target1 | rupiah }}
+                    {{ stock.get('target1_v2', stock.get('target1', 0)) | rupiah }}
                 </div>
 
             </div>
@@ -254,7 +299,7 @@
                 </div>
 
                 <div class="metric-value target-value">
-                    {{ stock.target2 | rupiah }}
+                    {{ stock.get('target2_v2', stock.get('target2', 0)) | rupiah }}
                 </div>
 
             </div>
@@ -266,16 +311,18 @@
                     R:R TP1
                 </div>
 
+                {% set rr1_display = stock.get('rr1_v2', stock.get('rr1', 0)) %}
+
                 <div class="metric-value
-                    {% if stock.rr1 >= 2 %}
+                    {% if rr1_display >= 2 %}
                         rr-good
-                    {% elif stock.rr1 >= 1 %}
+                    {% elif rr1_display >= 1 %}
                         rr-watch
                     {% else %}
                         rr-bad
                     {% endif %}
                 ">
-                    1 : {{ "%.2f"|format(stock.rr1) }}
+                    1 : {{ "%.2f"|format(rr1_display) }}
                 </div>
 
             </div>

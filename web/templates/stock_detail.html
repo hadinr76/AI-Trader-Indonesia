@@ -648,8 +648,8 @@ document.addEventListener("DOMContentLoaded", function () {
         title: "CURRENT"
     });
 
-    const entryLow = {{ stock.entry_low | float }};
-    const entryHigh = {{ stock.entry_high | float }};
+    const entryLow = {{ stock.buy_area_low | float }};
+    const entryHigh = {{ stock.buy_area_high | float }};
 
     const entryZoneBand = document.getElementById(
             "entry-zone-band"
@@ -713,9 +713,9 @@ document.addEventListener("DOMContentLoaded", function () {
         title: "ENTRY HIGH"
     });
 
-    const stopLoss = {{ stock.stop_loss | float }};
-    const target1 = {{ stock.target1 | float }};
-    const target2 = {{ stock.target2 | float }};
+    const stopLoss = {{ stock.stop_loss_v2 | float }};
+    const target1 = {{ stock.target1_v2 | float }};
+    const target2 = {{ stock.target2_v2 | float }};
 
     candleSeries.createPriceLine({
         price: stopLoss,

@@ -241,6 +241,29 @@ class TradeAreaEngine:
             )
 
         # ==========================================
+        # TRADE ACTION
+        # ==========================================
+
+        trade_action = "WAIT"
+
+        if status == "IN BUY AREA":
+
+            if trade_quality == "BAGUS":
+                trade_action = "BUY"
+
+            elif trade_quality == "CUKUP":
+                trade_action = "BUY ON WEAKNESS"
+
+            else:
+                trade_action = "WAIT"
+
+        elif status == "WAIT PULLBACK":
+            trade_action = "WAIT"
+
+        elif status == "BELOW BUY AREA":
+            trade_action = "WAIT"
+
+        # ==========================================
         # HASIL
         # ==========================================
 
@@ -265,6 +288,7 @@ class TradeAreaEngine:
             "confluence_score": score,
 
             "trade_quality": trade_quality,
+            "trade_action": trade_action,
             "trade_reason": trade_reason,
             "best_rr": best_rr,
         }
