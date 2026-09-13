@@ -139,17 +139,64 @@ class MarketData:
         )
 
         # =====================================
-        # DOWNLOAD BULK
+        # DOWNLOAD BULK PER BATCH
         # =====================================
 
-        data = yf.download(
-            tickers,
-            period=period,
-            interval="1d",
-            progress=False,
-            auto_adjust=False,
-            group_by="ticker",
-            threads=False
+        batch_size = 40
+        data_batches = []
+
+        for i in range(0, len(tickers), batch_size):
+
+            batch = tickers[
+                i:i + batch_size
+            ]
+
+            try:
+
+                batch_data = yf.download(
+                    batch,
+                    period=period,
+                    interval="1d",
+                    progress=False,
+                    auto_adjust=False,
+                    group_by="ticker",
+                    threads=4,
+                    multi_level_index=True
+                )
+
+                if (
+                    batch_data is not None
+                    and not batch_data.empty
+                ):
+
+                    data_batches.append(
+                        batch_data
+                    )
+
+                if self.debug:
+
+                    print(
+                        f"Batch "
+                        f"{i // batch_size + 1} "
+                        f"selesai "
+                        f"({len(batch)} saham)"
+                    )
+
+            except Exception as e:
+
+                print(
+                    f"Gagal download batch "
+                    f"{i // batch_size + 1}: {e}"
+                )
+
+        # Gabungkan seluruh batch
+        if not data_batches:
+
+            return {}
+
+        data = pd.concat(
+            data_batches,
+            axis=1
         )
 
         # =====================================

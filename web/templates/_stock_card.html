@@ -40,9 +40,42 @@
                         </span>
 
                         <span style="font-size: 11px; opacity: 0.7;">
-                            FINAL DECISION:
+                            AI FINAL SIGNAL:
                         </span>
-                        
+
+                        {% set final_signal = stock.get('final_signal_v2', 'WAIT') %}
+
+                        {% if final_signal == 'BUY' %}
+                            <span class="badge badge-buy">
+                                {{ final_signal }}
+                            </span>
+
+                        {% elif final_signal == 'BUY ON WEAKNESS' %}
+                            <span class="badge badge-bow">
+                                {{ final_signal }}
+                            </span>
+
+                        {% elif final_signal == 'WAIT PULLBACK' %}
+                            <span class="badge badge-watch">
+                                {{ final_signal }}
+                            </span>
+
+                        {% elif final_signal == 'WAIT' %}
+                            <span class="badge badge-watch">
+                                {{ final_signal }}
+                            </span>
+
+                        {% else %}
+                            <span class="badge">
+                                {{ final_signal }}
+                            </span>
+                        {% endif %}
+
+
+                        <span style="font-size: 11px; opacity: 0.7;">
+                            ENGINE DECISION:
+                        </span>
+
                         {% if stock.recommendation in ['BUY', 'STRONG BUY'] %}
 
                             <span class="badge badge-buy">
@@ -97,7 +130,7 @@
 
             </div>
 
-            
+
 
 
             <div class="opportunity-panel">
@@ -688,52 +721,277 @@
 
             <div class="analysis-text">
 
-                <strong>Major Support:</strong>
-                {{ stock.get('major_support', 0) | rupiah }}
+                <div style="
+                    display:grid;
+                    grid-template-columns:repeat(2, minmax(0, 1fr));
+                    gap:14px;
+                    margin-bottom:14px;
+                ">
+                    <div class="trade-item">
+                        <div class="metric-label" style="
+                            color:#55b7ff;
+                            font-weight:700;
+                        ">
+                            SUPPORT
+                        </div>
 
-                &nbsp; | &nbsp;
+                        <div class="trade-status-distance">
+                            <strong>Major Support:</strong>
+                            {{ stock.get('major_support', 0) | rupiah }}
+                        </div>
 
-                <strong>Minor Support:</strong>
-                {{ stock.get('minor_support', 0) | rupiah }}
+                        <div class="trade-status-distance">
+                            <strong>Minor Support:</strong>
+                            {{ stock.get('minor_support', 0) | rupiah }}
+                        </div>
+                    </div>
 
-                <br>
 
-                <strong>Minor Resistance:</strong>
-                {{ stock.get('minor_resistance', 0) | rupiah }}
+                    <div class="trade-item">
+                        <div class="metric-label" style="
+                            color:#ff6b6b;
+                            font-weight:700;
+                        ">
+                            RESISTANCE
+                        </div>
 
-                &nbsp; | &nbsp;
+                        <div class="trade-status-distance">
+                            <strong>Minor Resistance:</strong>
+                            {{ stock.get('minor_resistance', 0) | rupiah }}
+                        </div>
 
-                <strong>Major Resistance:</strong>
-                {{ stock.get('major_resistance', 0) | rupiah }}
+                        <div class="trade-status-distance">
+                            <strong>Major Resistance:</strong>
+                            {{ stock.get('major_resistance', 0) | rupiah }}
+                        </div>
+                    </div>
 
-                <br><br>
+                </div>
 
-                <strong>Demand Zone:</strong>
-                {{ stock.get('demand_zone_low', 0) | rupiah }}
-                -
-                {{ stock.get('demand_zone_high', 0) | rupiah }}
 
-                <br><br>
+                <div style="
+                    display:grid;
+                    grid-template-columns:repeat(2, minmax(0, 1fr));
+                    gap:14px;
+                    margin-bottom:14px;
+                ">
 
-                <strong>Fibonacci:</strong>
+                    <!-- ZONES -->
+                    <div class="trade-item">
 
-                38.2% =
-                {{ stock.get('fib_382', 0) | rupiah }}
+                        <div class="metric-label" style="
+                            color:#ffd166;
+                            font-weight:700;
+                        ">
+                            ZONES
+                        </div>
 
-                &nbsp; | &nbsp;
+                        <div class="trade-status-distance">
+                            <strong>Demand Zone:</strong>
+                            {{ stock.get('demand_zone_low', 0) | rupiah }}
+                            -
+                            {{ stock.get('demand_zone_high', 0) | rupiah }}
+                        </div>
 
-                50% =
-                {{ stock.get('fib_500', 0) | rupiah }}
+                        <div class="trade-status-distance">
+                            <strong>Supply Zone:</strong>
+                            {{ stock.get('supply_zone_low', 0) | rupiah }}
+                            -
+                            {{ stock.get('supply_zone_high', 0) | rupiah }}
+                        </div>
 
-                &nbsp; | &nbsp;
+                        <div class="trade-status-distance">
+                            <strong>Supply Status:</strong>
+                            {{ stock.get('supply_status', '-') }}
+                        </div>
 
-                61.8% =
-                {{ stock.get('fib_618', 0) | rupiah }}
+                        <div class="trade-status-distance">
+                            <strong>Supply Warning:</strong>
+                            {{ stock.get('supply_warning', '-') }}
+                        </div>
 
-                &nbsp; | &nbsp;
+                    </div>
 
-                78.6% =
-                {{ stock.get('fib_786', 0) | rupiah }}
+
+                    <!-- CONFIRMATION -->
+                    <div class="trade-item">
+
+                        <div class="metric-label" style="
+                            color:#4dd4ac;
+                            font-weight:700;
+                        ">
+                            CONFIRMATION
+                        </div>
+
+                        <div class="trade-status-distance">
+                            <strong>Breakout Retest:</strong>
+                            {{ stock.get('breakout_retest_status', '-') }}
+                        </div>
+
+                        <div class="trade-status-distance">
+                            <strong>Retest Holding:</strong>
+                            {{ stock.get('breakout_retest_holding', '-') }}
+                        </div>
+
+                        <div class="trade-status-distance">
+                            <strong>Volume Confirmation:</strong>
+                            {{ stock.get('volume_confirmation_status', '-') }}
+                        </div>
+
+                        <div class="trade-status-distance">
+                            <strong>Relative Volume:</strong>
+                            {{ stock.get('relative_volume_v2', '-') }}x
+                        </div>
+
+                        <div class="trade-status-distance">
+                            <strong>Volume Trend:</strong>
+                            {{ stock.get('volume_trend_v2', '-') }}
+                        </div>
+
+                        <div class="trade-status-distance">
+                            <strong>Volume Score:</strong>
+                            {{ stock.get('volume_confirmation_score', '-') }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div style="
+                    display:grid;
+                    grid-template-columns:repeat(2, minmax(0, 1fr));
+                    gap:14px;
+                    margin-bottom:14px;
+                ">
+
+                    <!-- AI FINAL SIGNAL -->
+                    <div class="trade-item">
+
+                        <div class="metric-label" style="
+                            color:#ffcc33;
+                            font-weight:700;
+                        ">
+                            AI FINAL SIGNAL
+                        </div>
+
+                        <div class="metric-value
+                            {% if stock.get('final_signal_v2') == 'BUY' %}
+                                trade-status-good
+                            {% elif stock.get('final_signal_v2') == 'BUY ON WEAKNESS' %}
+                                trade-status-watch
+                            {% elif stock.get('final_signal_v2') == 'WAIT PULLBACK' %}
+                                trade-status-wait
+                            {% else %}
+                                trade-status-neutral
+                            {% endif %}
+                        ">
+                            {{ stock.get('final_signal_v2', 'WAIT') }}
+                        </div>
+
+                    </div>
+
+
+                    <!-- TRADE SETUP -->
+                    <div class="trade-item">
+
+                        <div class="metric-label" style="
+                            color:#7dd3fc;
+                            font-weight:700;
+                        ">
+                            TRADE SETUP
+                        </div>
+
+                        <div class="metric-value">
+                            {{ stock.get('trade_setup_status', '-') }}
+                        </div>
+
+                        <div class="trade-status-distance">
+                            SCORE:
+                            <strong>
+                                {{ stock.get('trade_setup_score', '-') }}/100
+                            </strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- SIGNAL EXPLANATION -->
+                <div style="
+                    display:grid;
+                    grid-template-columns:minmax(0, 2fr) minmax(240px, 1fr);
+                    gap:12px;
+                    margin-top:12px;
+                ">
+
+                    <!-- SIGNAL EXPLANATION -->
+                    <div style="
+                        padding:14px;
+                        border:1px solid rgba(255,255,255,0.16);
+                        border-radius:10px;
+                        line-height:1.6;
+                    ">
+
+                        <div style="
+                            text-align:center;
+                            font-weight:700;
+                            color:#7dd3fc;
+                            margin-bottom:12px;
+                        ">
+                            SIGNAL EXPLANATION
+                        </div>
+
+
+                        {{ stock.get('signal_explanation_v2', '-') }}
+
+                    </div>
+
+
+                    <!-- FIBONACCI -->
+                    <div style="
+                        padding:14px;
+                        border:1px solid rgba(255,255,255,0.16);
+                        border-radius:10px;
+                        line-height:1.8;
+                    ">
+
+                        <div style="
+                            text-align:center;
+                            font-weight:700;
+                            color:#ffd166;
+                            margin-bottom:12px;
+                        ">
+                            FIBONACCI
+                        </div>
+
+
+                        <strong>38.2%</strong>
+                        &nbsp;
+                        {{ stock.get('fib_382', 0) | rupiah }}
+
+                        <br>
+
+                        <strong>50%</strong>
+                        &nbsp;
+                        {{ stock.get('fib_500', 0) | rupiah }}
+
+                        <br>
+
+                        <strong>61.8%</strong>
+                        &nbsp;
+                        {{ stock.get('fib_618', 0) | rupiah }}
+
+                        <br>
+
+                        <strong>78.6%</strong>
+                        &nbsp;
+                        {{ stock.get('fib_786', 0) | rupiah }}
+
+                    </div>
+
+                </div>
 
             </div>
 

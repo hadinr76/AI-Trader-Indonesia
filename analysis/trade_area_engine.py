@@ -5,6 +5,7 @@ class TradeAreaEngine:
         current_price,
         confluence,
         sr_structure,
+         supply_zone=None,
         stop_buffer_pct=1.0
     ):
 
@@ -25,6 +26,33 @@ class TradeAreaEngine:
         major_support = sr_structure.get(
             "major_support"
         )
+
+        # ==========================================
+        # SUPPLY ZONE V2
+        # ==========================================
+
+        supply_zone_low = None
+        supply_zone_high = None
+
+        if supply_zone:
+
+            supply_zone_low = supply_zone.get(
+                "zone_low"
+            )
+
+            supply_zone_high = supply_zone.get(
+                "zone_high"
+            )
+
+            if supply_zone_low is not None:
+                supply_zone_low = float(
+                    supply_zone_low
+                )
+
+            if supply_zone_high is not None:
+                supply_zone_high = float(
+                    supply_zone_high
+                )
 
         # ==========================================
         # VALIDASI BUY AREA
@@ -118,6 +146,67 @@ class TradeAreaEngine:
             tp2 = float(
                 major_resistance
             )
+
+        # ==========================================
+        # SUPPLY STATUS
+        # ==========================================
+
+        supply_status = None
+        distance_to_supply_pct = None
+
+        if (
+            supply_zone_low is not None
+            and supply_zone_high is not None
+        ):
+
+            if current_price < supply_zone_low:
+
+                supply_status = "BELOW SUPPLY"
+
+                distance_to_supply_pct = (
+                    (
+                        supply_zone_low -
+                        current_price
+                    )
+                    / current_price
+                    * 100
+                )
+
+            elif (
+                current_price >= supply_zone_low
+                and current_price <= supply_zone_high
+            ):
+
+                supply_status = "IN SUPPLY"
+
+                distance_to_supply_pct = 0.0
+
+            else:
+
+                supply_status = "ABOVE SUPPLY"
+
+        # ==========================================
+        # SUPPLY TARGET WARNING
+        # ==========================================
+
+        supply_warning = None
+
+        if supply_zone_low is not None:
+
+            if (
+                tp1 is not None
+                and supply_zone_low <= tp1
+            ):
+                supply_warning = "SUPPLY BEFORE TP1"
+
+            elif (
+                tp2 is not None
+                and supply_zone_low <= tp2
+            ):
+                supply_warning = "SUPPLY BEFORE TP2"
+
+            else:
+                supply_warning = "SUPPLY ABOVE TARGET"
 
         # ==========================================
         # RISK / REWARD
@@ -291,4 +380,9 @@ class TradeAreaEngine:
             "trade_action": trade_action,
             "trade_reason": trade_reason,
             "best_rr": best_rr,
+            "supply_zone_low": supply_zone_low,
+            "supply_zone_high": supply_zone_high,
+            "supply_status": supply_status,
+            "distance_to_supply_pct": distance_to_supply_pct,
+            "supply_warning": supply_warning,
         }

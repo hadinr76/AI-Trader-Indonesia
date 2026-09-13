@@ -28,6 +28,12 @@ from analysis.fibonacci_engine import FibonacciEngine
 from analysis.confluence_engine import ConfluenceEngine
 from analysis.trade_area_engine import TradeAreaEngine
 from analysis.demand_zone import DemandZone
+from analysis.supply_zone import SupplyZone
+from analysis.breakout_retest import BreakoutRetest
+from analysis.volume_confirmation import VolumeConfirmation
+from analysis.trade_setup_score import TradeSetupScore
+from analysis.signal_explanation import SignalExplanation
+from analysis.final_signal_engine import FinalSignalEngine
 
 
 class DailyRecommendation:
@@ -946,6 +952,34 @@ class DailyRecommendation:
                 lookback=120
             )
 
+            supply_zones_v2 = SupplyZone.detect(
+                data_v2,
+                lookback=120
+            )
+
+            active_supply_v2 = [
+                zone
+                for zone in supply_zones_v2
+                if (
+                    zone.get("status") == "ACTIVE"
+                    and
+                    zone.get("zone_high") is not None
+                    and
+                    float(zone["zone_high"]) >= current_price_v2
+                )
+            ]
+
+            selected_supply_v2 = None
+
+            if active_supply_v2:
+                selected_supply_v2 = min(
+                    active_supply_v2,
+                    key=lambda zone: max(
+                        float(zone["zone_low"]) - current_price_v2,
+                        0
+                    )
+                )
+
             confluence_v2 = ConfluenceEngine.calculate(
                 current_price=current_price_v2,
                 sr_structure=sr_v2,
@@ -956,7 +990,8 @@ class DailyRecommendation:
             trade_area_v2 = TradeAreaEngine.calculate(
                 current_price=current_price_v2,
                 confluence=confluence_v2,
-                sr_structure=sr_v2
+                sr_structure=sr_v2,
+                supply_zone=selected_supply_v2
             )
 
         except Exception as e:
@@ -969,8 +1004,82 @@ class DailyRecommendation:
             sr_v2 = {}
             fibonacci_v2 = {}
             demand_zones_v2 = []
+            supply_zones_v2 = []
+            selected_supply_v2 = None
+            breakout_retest_v2 = {}
+            volume_confirmation_v2 = {}
+            trade_setup_v2 = {}
             confluence_v2 = {}
             trade_area_v2 = {}
+            signal_explanation_v2 = None
+
+
+        breakout_retest_v2 = {}
+
+        minor_resistance_v2 = sr_v2.get(
+            "minor_resistance"
+        )
+
+        if minor_resistance_v2 is not None:
+
+            breakout_retest_v2 = (
+                BreakoutRetest.analyze(
+                    data_v2,
+                    resistance=minor_resistance_v2,
+                    tolerance_pct=1.0,
+                    lookback=10
+                )
+            )
+
+        volume_confirmation_v2 = (
+            VolumeConfirmation.analyze(
+                data_v2,
+                breakout_status=stock.get(
+                    "breakout"
+                ),
+                retest_status=breakout_retest_v2.get(
+                    "status"
+                )
+            )
+        )
+
+        trade_setup_v2 = (
+            TradeSetupScore.calculate(
+                trade_status=trade_area_v2.get(
+                    "status"
+                ),
+                trade_quality=trade_area_v2.get(
+                    "quality"
+                ),
+                demand_zone_low=(
+                    (
+                        confluence_v2.get("demand_zone")
+                        or {}
+                    ).get("zone_low")
+                ),
+                supply_status=trade_area_v2.get(
+                    "supply_status"
+                ),
+                supply_warning=trade_area_v2.get(
+                    "supply_warning"
+                ),
+                breakout_retest_status=breakout_retest_v2.get(
+                    "status"
+                ),
+                volume_confirmation_status=volume_confirmation_v2.get(
+                    "status"
+                ),
+                volume_score=volume_confirmation_v2.get(
+                    "score",
+                    0
+                ),
+                confluence_score=confluence_v2.get(
+                    "score",
+                    0
+                )
+            )
+        )
+
 
         # =================================================
         # MARKET REGIME
@@ -1092,6 +1201,72 @@ class DailyRecommendation:
             )
 
             return None
+
+        final_signal_v2 = (
+            FinalSignalEngine.decide(
+                decision_recommendation=decision.get(
+                    "recommendation"
+                ),
+                entry_signal=entry_recommendation_final,
+                trade_setup_status=trade_setup_v2.get(
+                    "status"
+                ),
+                trade_setup_score=trade_setup_v2.get(
+                    "score",
+                    0
+                ),
+                trade_status=trade_area_v2.get(
+                    "status"
+                ),
+                volume_confirmation=volume_confirmation_v2.get(
+                    "status"
+                ),
+                breakout_retest_status=breakout_retest_v2.get(
+                    "status"
+                ),
+                supply_status=trade_area_v2.get(
+                    "supply_status"
+                ),
+                supply_warning=trade_area_v2.get(
+                    "supply_warning"
+                )
+            )
+        )
+
+        signal_explanation_v2 = (
+            SignalExplanation.generate(
+                trade_setup_status=trade_setup_v2.get(
+                    "status"
+                ),
+                trade_setup_score=trade_setup_v2.get(
+                    "score"
+                ),
+                trade_status=trade_area_v2.get(
+                    "status"
+                ),
+                demand_zone_low=(
+                    (
+                        confluence_v2.get("demand_zone")
+                        or {}
+                    ).get("zone_low")
+                ),
+                supply_status=trade_area_v2.get(
+                    "supply_status"
+                ),
+                supply_warning=trade_area_v2.get(
+                    "supply_warning"
+                ),
+                breakout_retest_status=breakout_retest_v2.get(
+                    "status"
+                ),
+                volume_confirmation_status=volume_confirmation_v2.get(
+                    "status"
+                ),
+                final_decision=final_signal_v2.get(
+                    "signal"
+                )
+            )
+        )
 
         # =================================================
         # INDEX CLASSIFICATION
@@ -1365,6 +1540,108 @@ class DailyRecommendation:
             "major_resistance":
                 sr_v2.get(
                     "major_resistance"
+                ),
+
+            "supply_zone_low":
+                (
+                    selected_supply_v2.get(
+                        "zone_low"
+                    )
+                    if selected_supply_v2
+                    else None
+                ),
+
+            "supply_zone_high":
+                (
+                    selected_supply_v2.get(
+                        "zone_high"
+                    )
+                    if selected_supply_v2
+                    else None
+                ),
+
+            "breakout_retest_status":
+                breakout_retest_v2.get(
+                    "status"
+                ),
+
+            "breakout_retest_found":
+                breakout_retest_v2.get(
+                    "retest_found"
+                ),
+
+            "breakout_retest_holding":
+                breakout_retest_v2.get(
+                    "retest_holding"
+                ),
+
+            "supply_status":
+                trade_area_v2.get(
+                    "supply_status"
+                ),
+
+            "distance_to_supply_pct":
+                trade_area_v2.get(
+                    "distance_to_supply_pct"
+                ),
+
+            "supply_warning":
+                trade_area_v2.get(
+                    "supply_warning"
+                ),
+
+            "volume_confirmation_status":
+                volume_confirmation_v2.get(
+                    "status"
+                ),
+
+            "relative_volume_v2":
+                volume_confirmation_v2.get(
+                    "relative_volume"
+                ),
+
+            "volume_trend_v2":
+                volume_confirmation_v2.get(
+                    "volume_trend"
+                ),
+
+            "volume_confirmation":
+                volume_confirmation_v2.get(
+                    "confirmation"
+                ),
+
+            "volume_confirmation_score":
+                volume_confirmation_v2.get(
+                    "score"
+                ),
+
+            "trade_setup_score":
+                trade_setup_v2.get(
+                    "score"
+                ),
+
+            "trade_setup_status":
+                trade_setup_v2.get(
+                    "status"
+                ),
+
+            "trade_setup_reasons":
+                trade_setup_v2.get(
+                    "reasons",
+                    []
+                ),
+            "signal_explanation_v2":
+                signal_explanation_v2,
+
+            "final_signal_v2":
+                final_signal_v2.get(
+                    "signal"
+                ),
+
+            "final_signal_reasons_v2":
+                final_signal_v2.get(
+                    "reasons",
+                    []
                 ),
 
             # Fibonacci V2
@@ -2728,7 +3005,7 @@ class DailyRecommendation:
                     "BOW Filter : Priority < 70"
                 )
 
-                
+
             elif rr1 < 2:
 
                 stock["recommendation"] = "WATCH"
@@ -3531,7 +3808,7 @@ class DailyRecommendation:
 
         if breakout_buy:
 
-        
+
             breakout_buy.sort(
 
                 key=lambda x:
@@ -3543,7 +3820,7 @@ class DailyRecommendation:
                 reverse=True
 
             )
-            
+
             for index, stock in enumerate(
                 breakout_buy[:limit],
                 start=1
