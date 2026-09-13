@@ -1013,6 +1013,25 @@ class DailyRecommendation:
             mtf_status = "MIXED"
 
         # =================================================
+        # FINAL ENTRY RECOMMENDATION
+        # Trade Area V2 menjadi prioritas
+        # EntryEngine lama sebagai fallback
+        # =================================================
+
+        entry_recommendation_final = (
+            trade_area_v2.get("trade_action")
+            if trade_area_v2
+            else None
+        )
+
+        if not entry_recommendation_final:
+            entry_recommendation_final = (
+                entry.get("recommendation")
+                if entry
+                else None
+            )
+
+        # =================================================
         # FINAL DECISION
         # =================================================
 
@@ -1060,11 +1079,7 @@ class DailyRecommendation:
                         fundamental_score
                     ),
 
-                    entry_recommendation=(
-                        entry[
-                            "recommendation"
-                        ]
-                    )
+                    entry_recommendation=entry_recommendation_final
 
                 )
             )

@@ -39,7 +39,10 @@
                             {{ stock.watchlist_status }}
                         </span>
 
-
+                        <span style="font-size: 11px; opacity: 0.7;">
+                            FINAL DECISION:
+                        </span>
+                        
                         {% if stock.recommendation in ['BUY', 'STRONG BUY'] %}
 
                             <span class="badge badge-buy">
@@ -211,7 +214,7 @@
                             )
                         %}
 
-                        ACTION:
+                        ENTRY SIGNAL:
                         <span class="
                             {% if action_display == 'BUY' %}
                                 action-buy
