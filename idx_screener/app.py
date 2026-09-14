@@ -89,7 +89,7 @@ def dashboard():
     if query:
         results = [
             r for r in results
-            if query in str(r.get("kode", "")).upper()
+            if query in str(r.get("code", "")).upper()
         ]
 
     # Urutkan; kalau field sort_by tidak ada di data, fallback ke 0
