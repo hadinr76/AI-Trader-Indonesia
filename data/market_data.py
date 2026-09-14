@@ -1,12 +1,37 @@
+import logging
 import time
-import yfinance as yf
+from pathlib import Path
+
 import pandas as pd
+import yfinance as yf
+
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
+# =====================================
+# KONFIGURASI KEANDALAN DATA
+# =====================================
+# Bisa diubah lewat env var kalau perlu, tapi punya default yang aman.
+
+MAX_RETRIES = 3          # jumlah percobaan ulang per ticker/batch
+RETRY_BACKOFF_SECONDS = 3  # jeda dasar antar percobaan ulang (naik tiap retry)
+BATCH_DELAY_SECONDS = 2    # jeda antar batch saat bulk download
+CACHE_DIR = Path("data/cache/market_data")
+CACHE_ENABLED = True
 
 
 class MarketData:
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, use_cache=True):
         self.debug = debug
+        self.use_cache = use_cache and CACHE_ENABLED
+
+        if self.use_cache:
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     # =====================================
     # Daily Data - SINGLE STOCK
@@ -38,7 +63,56 @@ class MarketData:
         return kode + ".JK"
 
     # =====================================
-    # Universal Downloader
+    # CACHE HELPERS
+    # =====================================
+    # Cache per-hari: kalau data hari ini sudah pernah diambil, tidak perlu
+    # download ulang lagi ke yfinance (mengurangi risiko kena rate-limit).
+
+    def _cache_path(self, ticker, period, interval):
+
+        today = time.strftime("%Y-%m-%d")
+        safe_ticker = ticker.replace("^", "IDX_").replace("=", "_")
+
+        filename = f"{safe_ticker}_{period}_{interval}_{today}.pkl"
+
+        return CACHE_DIR / filename
+
+    def _load_cache(self, ticker, period, interval):
+
+        if not self.use_cache:
+            return None
+
+        path = self._cache_path(ticker, period, interval)
+
+        if not path.exists():
+            return None
+
+        try:
+            return pd.read_pickle(path)
+        except Exception as e:
+            if self.debug:
+                logger.warning(
+                    "Gagal membaca cache %s: %s", path, e
+                )
+            return None
+
+    def _save_cache(self, ticker, period, interval, data):
+
+        if not self.use_cache:
+            return
+
+        path = self._cache_path(ticker, period, interval)
+
+        try:
+            data.to_pickle(path)
+        except Exception as e:
+            if self.debug:
+                logger.warning(
+                    "Gagal menyimpan cache %s: %s", path, e
+                )
+
+    # =====================================
+    # Universal Downloader (SINGLE TICKER)
     # =====================================
 
     def get_data(
@@ -50,61 +124,72 @@ class MarketData:
 
         ticker = self.format_symbol(kode)
 
-        download_start = time.time()
+        cached = self._load_cache(ticker, period, interval)
 
-        data = yf.download(
-            ticker,
-            period=period,
-            interval=interval,
-            progress=False,
-            auto_adjust=False
+        if cached is not None and not cached.empty:
+
+            if self.debug:
+                logger.info("Pakai cache untuk %s", ticker)
+
+            return cached
+
+        last_error = None
+
+        for attempt in range(1, MAX_RETRIES + 1):
+
+            try:
+                download_start = time.time()
+
+                data = yf.download(
+                    ticker,
+                    period=period,
+                    interval=interval,
+                    progress=False,
+                    auto_adjust=False,
+                )
+
+                download_elapsed = time.time() - download_start
+
+                if self.debug:
+                    logger.info(
+                        "YFINANCE DOWNLOAD %s: %.2f detik (percobaan %d)",
+                        ticker, download_elapsed, attempt
+                    )
+
+                if isinstance(data.columns, pd.MultiIndex):
+                    data.columns = data.columns.get_level_values(0)
+
+                if data.empty:
+                    raise ValueError(f"Tidak ada data untuk {ticker}")
+
+                if self.debug:
+                    logger.info(
+                        "Ticker %s - data terbaru:\n%s",
+                        ticker, data.tail()
+                    )
+
+                self._save_cache(ticker, period, interval, data)
+
+                return data
+
+            except Exception as e:
+
+                last_error = e
+
+                logger.warning(
+                    "Gagal ambil data %s (percobaan %d/%d): %s",
+                    ticker, attempt, MAX_RETRIES, e
+                )
+
+                if attempt < MAX_RETRIES:
+                    time.sleep(RETRY_BACKOFF_SECONDS * attempt)
+
+        # Semua percobaan gagal - lempar error yang jelas ke pemanggil,
+        # supaya pemanggil (mis. scanner) bisa skip saham ini dan lanjut,
+        # bukan bikin seluruh proses screening berhenti.
+        raise ValueError(
+            f"Tidak ada data untuk {ticker} setelah {MAX_RETRIES} percobaan: {last_error}"
         )
-
-        download_elapsed = time.time() - download_start
-
-        print()
-        print(
-            f"YFINANCE DOWNLOAD   : "
-            f"{download_elapsed:.2f} DETIK"
-        )
-
-        if isinstance(data.columns, pd.MultiIndex):
-
-            data.columns = (
-                data.columns
-                .get_level_values(0)
-            )
-
-        if data.empty:
-
-            raise ValueError(
-                f"Tidak ada data untuk {ticker}"
-            )
-
-        # =====================================
-        # DEBUG
-        # =====================================
-
-        if self.debug:
-
-            print(
-                "\n=============================="
-            )
-
-            print(
-                "Ticker :",
-                ticker
-            )
-
-            print(
-                data.tail()
-            )
-
-            print(
-                "==============================\n"
-            )
-
-        return data
 
     # =====================================
     # BULK DAILY DATA
@@ -117,7 +202,6 @@ class MarketData:
     ):
 
         if not kode_saham_list:
-
             return {}
 
         # =====================================
@@ -127,145 +211,159 @@ class MarketData:
         ticker_map = {}
 
         for kode in kode_saham_list:
-
-            ticker = self.format_symbol(
-                kode
-            )
-
+            ticker = self.format_symbol(kode)
             ticker_map[ticker] = kode
 
-        tickers = list(
-            ticker_map.keys()
-        )
+        tickers = list(ticker_map.keys())
+
+        results = {}
 
         # =====================================
-        # DOWNLOAD BULK PER BATCH
+        # CEK CACHE DULU - kurangi jumlah yang perlu didownload
+        # =====================================
+
+        tickers_to_download = []
+
+        for ticker in tickers:
+
+            cached = self._load_cache(ticker, period, "1d")
+
+            if cached is not None and not cached.empty:
+                results[ticker_map[ticker]] = cached
+            else:
+                tickers_to_download.append(ticker)
+
+        if self.debug and results:
+            logger.info(
+                "Bulk: %d/%d saham diambil dari cache",
+                len(results), len(tickers)
+            )
+
+        if not tickers_to_download:
+            return results
+
+        # =====================================
+        # DOWNLOAD BULK PER BATCH, DENGAN RETRY + JEDA ANTAR BATCH
         # =====================================
 
         batch_size = 40
         data_batches = []
 
-        for i in range(0, len(tickers), batch_size):
-
-            batch = tickers[
-                i:i + batch_size
-            ]
-
-            try:
-
-                batch_data = yf.download(
-                    batch,
-                    period=period,
-                    interval="1d",
-                    progress=False,
-                    auto_adjust=False,
-                    group_by="ticker",
-                    threads=4,
-                    multi_level_index=True
-                )
-
-                if (
-                    batch_data is not None
-                    and not batch_data.empty
-                ):
-
-                    data_batches.append(
-                        batch_data
-                    )
-
-                if self.debug:
-
-                    print(
-                        f"Batch "
-                        f"{i // batch_size + 1} "
-                        f"selesai "
-                        f"({len(batch)} saham)"
-                    )
-
-            except Exception as e:
-
-                print(
-                    f"Gagal download batch "
-                    f"{i // batch_size + 1}: {e}"
-                )
-
-        # Gabungkan seluruh batch
-        if not data_batches:
-
-            return {}
-
-        data = pd.concat(
-            data_batches,
-            axis=1
+        total_batches = (
+            (len(tickers_to_download) - 1) // batch_size + 1
         )
 
-        # =====================================
-        # VALIDASI
-        # =====================================
+        for i in range(0, len(tickers_to_download), batch_size):
+
+            batch = tickers_to_download[i:i + batch_size]
+            batch_number = i // batch_size + 1
+
+            batch_data = None
+
+            for attempt in range(1, MAX_RETRIES + 1):
+
+                try:
+                    batch_data = yf.download(
+                        batch,
+                        period=period,
+                        interval="1d",
+                        progress=False,
+                        auto_adjust=False,
+                        group_by="ticker",
+                        threads=4,
+                        multi_level_index=True
+                    )
+
+                    if batch_data is not None and not batch_data.empty:
+                        break
+
+                    raise ValueError("Batch kosong")
+
+                except Exception as e:
+
+                    logger.warning(
+                        "Gagal download batch %d/%d (percobaan %d/%d, %d saham): %s",
+                        batch_number, total_batches, attempt, MAX_RETRIES,
+                        len(batch), e
+                    )
+
+                    if attempt < MAX_RETRIES:
+                        time.sleep(RETRY_BACKOFF_SECONDS * attempt)
+                    else:
+                        batch_data = None
+
+            if batch_data is not None and not batch_data.empty:
+
+                data_batches.append(batch_data)
+
+                if self.debug:
+                    logger.info(
+                        "Batch %d/%d selesai (%d saham)",
+                        batch_number, total_batches, len(batch)
+                    )
+            else:
+                logger.warning(
+                    "Batch %d/%d dilewati setelah %d percobaan gagal - "
+                    "%d saham di batch ini tidak dapat data",
+                    batch_number, total_batches, MAX_RETRIES, len(batch)
+                )
+
+            # Jeda antar batch supaya tidak kena rate-limit yfinance,
+            # kecuali ini batch terakhir.
+            if i + batch_size < len(tickers_to_download):
+                time.sleep(BATCH_DELAY_SECONDS)
+
+        # Gabungkan seluruh batch yang berhasil
+        if not data_batches:
+
+            if not results:
+                logger.warning(
+                    "Semua batch gagal - tidak ada data baru yang didapat."
+                )
+
+            return results
+
+        data = pd.concat(data_batches, axis=1)
 
         if data is None or data.empty:
-
-            return {}
-
-        results = {}
+            return results
 
         # =====================================
         # MULTI TICKER DATA
         # =====================================
 
-        if isinstance(
-            data.columns,
-            pd.MultiIndex
-        ):
+        if isinstance(data.columns, pd.MultiIndex):
 
             available_tickers = (
-                data.columns
-                .get_level_values(0)
-                .unique()
+                data.columns.get_level_values(0).unique()
             )
 
             for ticker in available_tickers:
 
                 if ticker not in ticker_map:
-
                     continue
 
                 try:
-
-                    stock_data = data[
-                        ticker
-                    ].copy()
+                    stock_data = data[ticker].copy()
 
                     if stock_data.empty:
-
                         continue
 
-                    stock_data = (
-                        stock_data
-                        .dropna(
-                            how="all"
-                        )
-                    )
+                    stock_data = stock_data.dropna(how="all")
 
                     if stock_data.empty:
-
                         continue
 
-                    kode = ticker_map[
-                        ticker
-                    ]
+                    kode = ticker_map[ticker]
+                    results[kode] = stock_data
 
-                    results[kode] = (
-                        stock_data
-                    )
+                    self._save_cache(ticker, period, "1d", stock_data)
 
                 except Exception as e:
 
                     if self.debug:
-
-                        print(
-                            f"Gagal membaca "
-                            f"{ticker}: {e}"
+                        logger.warning(
+                            "Gagal membaca %s: %s", ticker, e
                         )
 
         # =====================================
@@ -274,43 +372,25 @@ class MarketData:
 
         else:
 
-            if len(tickers) == 1:
+            if len(tickers_to_download) == 1:
 
-                ticker = tickers[0]
-
-                kode = ticker_map[
-                    ticker
-                ]
+                ticker = tickers_to_download[0]
+                kode = ticker_map[ticker]
 
                 stock_data = data.copy()
 
                 if not stock_data.empty:
-
-                    results[kode] = (
-                        stock_data
-                    )
+                    results[kode] = stock_data
+                    self._save_cache(ticker, period, "1d", stock_data)
 
         # =====================================
         # DEBUG
         # =====================================
 
         if self.debug:
-
-            print()
-            print(
-                "Bulk download selesai."
+            logger.info(
+                "Bulk download selesai. Diminta: %d, Berhasil: %d",
+                len(kode_saham_list), len(results)
             )
-
-            print(
-                "Diminta :",
-                len(kode_saham_list)
-            )
-
-            print(
-                "Berhasil:",
-                len(results)
-            )
-
-            print()
 
         return results
