@@ -48,9 +48,16 @@
     </form>
 
     {% if not results %}
+        {% if query %}
+        <p class="empty-state">
+            Tidak ada saham dengan kode "{{ query }}" pada hasil scan terakhir
+            (mungkin tersaring di tahap screening kandidat, atau memang belum ada datanya).
+        </p>
+        {% else %}
         <p class="empty-state">
             Belum ada hasil screening. Klik "Jalankan Scan Sekarang" di atas untuk memulai.
         </p>
+        {% endif %}
     {% else %}
     <table>
         <thead>
@@ -67,7 +74,7 @@
         <tbody>
             {% for r in results %}
             <tr class="rec-{{ r.get('recommendation', '')|lower|replace(' ', '-') }}">
-                <td>{{ r.get('kode', '-') }}</td>
+                <td>{{ r.get('code', '-') }}</td>
                 <td>{{ r.get('recommendation', '-') }}</td>
                 <td>{{ r.get('opportunity_score', '-') }}</td>
                 <td>{{ r.get('buy_now_priority_score', '-') }}</td>
