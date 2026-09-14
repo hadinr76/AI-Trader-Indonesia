@@ -347,10 +347,10 @@
                     R:R TP1
                 </div>
 
-                {% set rr1_display = stock.get('rr1_v2', stock.get('rr1', 0)) %}
+                {% set rr1_display = stock.get('rr1_v2', stock.get('rr1', 0)) or 0 %}
 
                 <div class="metric-value
-                    {% if rr1_display >= 2 %}
+                    {% if rr1_display is not none and rr1_display >= 2 %}
                         rr-good
                     {% elif rr1_display >= 1 %}
                         rr-watch
