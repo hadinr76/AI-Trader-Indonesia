@@ -17,18 +17,27 @@ if not logger.handlers:
 # =====================================
 # Bisa diubah lewat env var kalau perlu, tapi punya default yang aman.
 
-MAX_RETRIES = 3          # jumlah percobaan ulang per ticker/batch
+MAX_RETRIES = 2          # jumlah percobaan ulang per ticker/batch
 RETRY_BACKOFF_SECONDS = 3  # jeda dasar antar percobaan ulang (naik tiap retry)
 BATCH_DELAY_SECONDS = 2    # jeda antar batch saat bulk download
 CACHE_DIR = Path("data/cache/market_data")
 CACHE_ENABLED = True
+CACHE_TTL_SECONDS = 3600
+
+FAILED_CACHE_FILE = CACHE_DIR / "failed_tickers.txt"
 
 
 class MarketData:
 
-    def __init__(self, debug=False, use_cache=True):
+    def __init__(
+        self,
+        debug=False,
+        use_cache=True,
+        force_refresh=False
+    ):
         self.debug = debug
         self.use_cache = use_cache and CACHE_ENABLED
+        self.force_refresh = force_refresh
 
         if self.use_cache:
             CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -82,9 +91,17 @@ class MarketData:
         if not self.use_cache:
             return None
 
+        if self.force_refresh:
+            return None
+
         path = self._cache_path(ticker, period, interval)
 
         if not path.exists():
+            return None
+
+        cache_age = time.time() - path.stat().st_mtime
+
+        if cache_age > CACHE_TTL_SECONDS:
             return None
 
         try:
@@ -194,7 +211,40 @@ class MarketData:
     # =====================================
     # BULK DAILY DATA
     # =====================================
+    
+    def _load_failed_tickers(self):
 
+        if not FAILED_CACHE_FILE.exists():
+            return set()
+
+        try:
+            with open(FAILED_CACHE_FILE, "r", encoding="utf-8") as f:
+                return {
+                    line.strip()
+                    for line in f
+                    if line.strip()
+                }
+        except Exception:
+            return set()
+
+
+    def _save_failed_tickers(self, tickers):
+
+        CACHE_DIR.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
+        try:
+            with open(FAILED_CACHE_FILE, "w", encoding="utf-8") as f:
+                for ticker in sorted(tickers):
+                    f.write(ticker + "\n")
+        except Exception as e:
+            logger.warning(
+                "Gagal menyimpan failed ticker cache: %s",
+                e
+            )
+    
     def get_bulk_daily(
         self,
         kode_saham_list,
@@ -218,6 +268,8 @@ class MarketData:
 
         results = {}
 
+        failed_tickers = self._load_failed_tickers()
+
         # =====================================
         # CEK CACHE DULU - kurangi jumlah yang perlu didownload
         # =====================================
@@ -225,6 +277,9 @@ class MarketData:
         tickers_to_download = []
 
         for ticker in tickers:
+
+            if ticker in failed_tickers:
+                continue
 
             cached = self._load_cache(ticker, period, "1d")
 
@@ -246,7 +301,7 @@ class MarketData:
         # DOWNLOAD BULK PER BATCH, DENGAN RETRY + JEDA ANTAR BATCH
         # =====================================
 
-        batch_size = 40
+        batch_size = 100
         data_batches = []
 
         total_batches = (
@@ -270,7 +325,7 @@ class MarketData:
                         progress=False,
                         auto_adjust=False,
                         group_by="ticker",
-                        threads=4,
+                        threads=8,
                         multi_level_index=True
                     )
 
@@ -382,6 +437,24 @@ class MarketData:
                 if not stock_data.empty:
                     results[kode] = stock_data
                     self._save_cache(ticker, period, "1d", stock_data)
+
+        # =====================================
+        # SIMPAN TICKER YANG GAGAL
+        # =====================================
+
+        successful_tickers = {
+            self.format_symbol(kode)
+            for kode in results.keys()
+        }
+
+        newly_failed = (
+            set(tickers_to_download)
+            - successful_tickers
+        )
+
+        if newly_failed:
+            failed_tickers.update(newly_failed)
+            self._save_failed_tickers(failed_tickers)
 
         # =====================================
         # DEBUG

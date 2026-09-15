@@ -101,6 +101,7 @@ class DailyRecommendation:
             fast_screener.scan()
         )
 
+        
         # =================================================
         # MOST ACTIVE - TRANSACTION VALUE
         # =================================================
@@ -585,7 +586,7 @@ class DailyRecommendation:
         # SAFETY LIMIT
         # =================================================
 
-        max_deep_analysis = 50
+        max_deep_analysis = 20
 
         top_candidates = (
             combined_candidates[

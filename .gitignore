@@ -32,3 +32,10 @@ Desktop.ini
 
 # Hasil output scanner
 output/
+
+# Market data runtime cache
+data/cache/
+
+# Web runtime cache
+data/web_cache/latest_most_active.json
+data/web_cache/latest_screening.json

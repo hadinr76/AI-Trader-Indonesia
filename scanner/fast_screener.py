@@ -52,10 +52,11 @@ class FastScreener:
     def __init__(
         self,
         stocks=None,
-        period="1y"
+        period="1y",
+        market=None
     ):
 
-        self.market = MarketData()
+        self.market = market or MarketData()
 
         self.period = period
 
