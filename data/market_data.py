@@ -1,3 +1,4 @@
+import os
 import logging
 import time
 from pathlib import Path
@@ -20,7 +21,12 @@ if not logger.handlers:
 MAX_RETRIES = 2          # jumlah percobaan ulang per ticker/batch
 RETRY_BACKOFF_SECONDS = 3  # jeda dasar antar percobaan ulang (naik tiap retry)
 BATCH_DELAY_SECONDS = 2    # jeda antar batch saat bulk download
-CACHE_DIR = Path("data/cache/market_data")
+CACHE_DIR = Path(
+    os.environ.get(
+        "MARKET_CACHE_DIR",
+        "data/cache/market_data"
+    )
+)
 CACHE_ENABLED = True
 CACHE_TTL_SECONDS = 3600
 

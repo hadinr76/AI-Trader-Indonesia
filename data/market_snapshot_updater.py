@@ -1,10 +1,18 @@
-﻿import time
+﻿import os
+import time
 import json
 from pathlib import Path
 
 from data.market_data import MarketData
 from scanner.stock_universe_engine import StockUniverseEngine
 
+
+SNAPSHOT_DIR = Path(
+    os.environ.get(
+        "MARKET_CACHE_DIR",
+        "data/cache/market_data"
+    )
+)
 
 class MarketSnapshotUpdater:
 
@@ -13,8 +21,7 @@ class MarketSnapshotUpdater:
 
     def update(self):
 
-        lock_file = "data/cache/market_data/snapshot_update.lock"
-        lock_path = Path(lock_file)
+        lock_path = SNAPSHOT_DIR / "snapshot_update.lock"
 
         if lock_path.exists():
             print("Market snapshot update sedang berjalan.")
@@ -52,9 +59,7 @@ class MarketSnapshotUpdater:
 
             elapsed = time.time() - start
 
-            status_file = Path(
-                "data/cache/market_data/snapshot_status.json"
-            )
+            status_file = SNAPSHOT_DIR / "snapshot_status.json"
 
             status = {
                 "last_successful_update": time.strftime(
