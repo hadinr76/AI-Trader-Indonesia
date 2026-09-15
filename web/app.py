@@ -15,6 +15,7 @@ from flask import Flask, render_template, redirect, url_for, request
 from scanner.daily_recommendation import DailyRecommendation
 from scanner.stock_universe_engine import StockUniverseEngine
 from data.market_data import MarketData
+from data.market_snapshot_updater import MarketSnapshotUpdater
 
 
 app = Flask(__name__)
@@ -504,6 +505,37 @@ def stock_detail(code):
         source=source,
         chart_data=chart_data
     )
+@app.route("/internal/update-market", methods=["POST"])
+def update_market_snapshot():
+
+    secret = request.headers.get("X-Update-Secret")
+    expected_secret = os.environ.get("MARKET_UPDATE_SECRET")
+
+    if not expected_secret or secret != expected_secret:
+        return {"status": "unauthorized"}, 401
+
+    try:
+        updater = MarketSnapshotUpdater()
+        results = updater.update()
+
+        if results is None:
+            return {
+                "status": "skipped",
+                "message": "Market update already running"
+            }, 409
+
+        return {
+            "status": "success",
+            "stock_count": len(results)
+        }, 200
+
+    except Exception as error:
+        print(f"Market snapshot update error: {error}")
+
+        return {
+            "status": "error"
+        }, 500
+
 @app.route("/scan")
 def scan():
 
