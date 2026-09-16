@@ -24,6 +24,10 @@ def trigger_market_update():
     print("Status :", response.status_code)
     print("Response :", response.text)
 
+    if response.status_code == 409:
+        print("Market update sedang berjalan. Trigger dilewati.")
+        return
+
     response.raise_for_status()
 
 
